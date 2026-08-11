@@ -53,15 +53,14 @@ body{
 .switch button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
 .switch.sub button[aria-pressed="true"]{background:transparent;border-color:var(--stamp);color:var(--stamp);font-weight:600}
 
-/* hero */
-.hero{position:relative;background:var(--card);border:1px solid var(--rule);border-bottom:0;border-radius:3px 3px 0 0;padding:20px var(--pad) 26px;margin:14px 0 22px}
-.hero::after{content:"";position:absolute;left:0;right:0;bottom:-7px;height:14px;
+/* period bar */
+.periodbar{position:relative;background:var(--card);border:1px solid var(--rule);border-bottom:0;border-radius:3px 3px 0 0;
+  padding:14px var(--pad) 18px;margin:14px 0 22px;display:flex;justify-content:space-between;align-items:baseline;gap:14px}
+.periodbar::after{content:"";position:absolute;left:0;right:0;bottom:-7px;height:14px;
   background-image:radial-gradient(circle at 7px 7px, var(--paper) 6px, transparent 6.5px);
   background-size:14px 14px;background-repeat:repeat-x}
-.hero-num{font-family:"IBM Plex Mono",monospace;font-weight:500;font-size:44px;line-height:1;letter-spacing:-.03em;margin:6px 0 4px}
-.hero-num.over{color:var(--over)}
-.hero-sub{font-size:13px;color:var(--ink-soft)}
-.hero-meter{margin-top:16px}
+.periodbar .range{font-weight:600;font-size:15px;white-space:nowrap}
+.periodbar .count{font-family:"IBM Plex Mono",monospace;font-size:11px;line-height:1.5;color:var(--ink-soft);text-align:right}
 
 /* meters */
 .meter{position:relative;height:6px;background:var(--rule);border-radius:1px;overflow:hidden}
@@ -148,7 +147,7 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--stamp);outline-
   "use strict";
 
   /* Paste your deployment URL here to hard-code it for both phones. */
-  var API_URL = "https://script.google.com/macros/s/AKfycbx7I9NluEEMm12iwtCybVFcNSCbb4WXdwtQyTNPoIvWOAw1f36Mb5bnq3gHY2G-VIvN/exec";
+  var API_URL = "https://script.google.com/macros/s/AKfycbxjAi3auqVEJEpegoz8fHtijxTyL4sCyh36EngQ0yH4Fod-RhmTNAO0tyifhh0K8pubmg/exec";
 
   var store = {
     get: function (k, d) { try { var v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
@@ -168,8 +167,9 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--stamp);outline-
     message: null
   };
 
-  var DEFAULT_PERIOD = { berk: "rolling", keeley: "month", household: "month" };
+  var DEFAULT_PERIOD = { berk: "week", keeley: "month", household: "month" };
   var LABEL = { berk: "Berk", keeley: "Keeley", household: "Both" };
+  var PRIORITY = ["Dining Out", "General Spend", "Groceries", "Cars"];
 
   var app = document.getElementById("app");
   var setup = document.getElementById("setup");
@@ -259,10 +259,6 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--stamp);outline-
 
     document.getElementById("updated").textContent = "as of " + d.updated;
 
-    var budgeted = lines.filter(function (l) { return l.budget > 0; });
-    var totalBudget = budgeted.reduce(function (a, l) { return a + l.budget; }, 0);
-    var totalSpent = lines.reduce(function (a, l) { return a + l.spent; }, 0);
-    var left = totalBudget - totalSpent;
     var paceFrac = period.elapsedDays / period.lengthDays;
 
     var html = "";
@@ -275,39 +271,35 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--stamp);outline-
     html += "</div>";
 
     html += '<div class="switch sub" role="group" aria-label="Time window">';
-    html += '<button type="button" data-period="rolling" aria-pressed="' + (pKey === "rolling") + '">Last ' + d.rollingDays + ' days</button>';
+    html += '<button type="button" data-period="week" aria-pressed="' + (pKey === "week") + '">This week</button>';
     html += '<button type="button" data-period="month" aria-pressed="' + (pKey === "month") + '">' + esc(d.periods.month.label) + '</button>';
     html += "</div>";
 
-    /* hero */
-    html += '<section class="hero">';
-    if (totalBudget > 0) {
-      html += '<div class="eyebrow">' + (left < 0 ? "Over budget" : "Left to spend") + "</div>";
-      html += '<div class="hero-num ' + (left < 0 ? "over" : "") + '">' + money(Math.abs(left)) + "</div>";
-      html += '<div class="hero-sub">' + money(totalSpent) + " of " + money(totalBudget, false) + " · " +
-              (pKey === "month"
-                ? (period.remainingDays === 0 ? "last day of the month" : period.remainingDays + " days left in " + esc(period.label))
-                : "rolling window, " + money(totalSpent / period.lengthDays) + "/day") +
-              "</div>";
-      html += '<div class="hero-meter"><div class="meter">' +
-              '<span class="meter-fill ' + fillClass(totalSpent, totalBudget, pKey, paceFrac) + '" style="width:' + pct(totalSpent, totalBudget) + '%"></span>' +
-              (pKey === "month" ? '<i class="pace" style="left:' + (paceFrac * 100) + '%"></i>' : "") +
-              "</div></div>";
-    } else {
-      html += '<div class="eyebrow">Spent</div>';
-      html += '<div class="hero-num">' + money(totalSpent) + "</div>";
-      html += '<div class="hero-sub">No budgets set yet. Add them below and this turns into what\u2019s left.</div>';
-    }
-    html += "</section>";
+    /* period bar */
+    var daysLeft = period.remainingDays === 0
+      ? (pKey === "week" ? "last day of the week" : "last day of the month")
+      : period.remainingDays + (period.remainingDays === 1 ? " day left" : " days left");
+    html += '<section class="periodbar">' +
+            '<span class="range">' + esc(period.start) + " \u2013 " + esc(period.end) + "</span>" +
+            '<span class="count">' + daysLeft +
+            (period.budgetNote ? "<br>" + esc(period.budgetNote) : "") + "</span></section>";
 
     /* categories */
     html += '<div class="section-head"><span class="eyebrow">Category</span><span class="eyebrow">' +
-            (pKey === "month" ? "Spent this month" : "Spent in " + d.rollingDays + " days") + "</span></div>";
+            (pKey === "month" ? "Spent in " + esc(period.label) : "Spent this week") + "</span></div>";
     html += '<section class="rows">';
 
-    lines.slice().sort(function (a, b) { return b.spent - a.spent || a.category.localeCompare(b.category); })
+    lines.slice().sort(function (a, b) {
+      var ia = PRIORITY.indexOf(a.category), ib = PRIORITY.indexOf(b.category);
+      if (ia > -1 || ib > -1) {
+        if (ia === -1) return 1;
+        if (ib === -1) return -1;
+        return ia - ib;
+      }
+      return b.spent - a.spent || a.category.localeCompare(b.category);
+    })
       .forEach(function (l) {
-        if (l.budget <= 0 && l.spent === 0) return;
+        if (l.budget <= 0 && l.spent === 0 && PRIORITY.indexOf(l.category) === -1) return;
         var remaining = l.budget - l.spent;
         html += '<div class="row"><div class="row-top">' +
                 '<span class="row-name">' + esc(l.category) + '</span><span class="leader"></span>' +
@@ -326,9 +318,9 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--stamp);outline-
         }
         html += "</div>";
         if (l.budget > 0) {
-          html += '<div class="meter"><span class="meter-fill ' + fillClass(l.spent, l.budget, pKey, paceFrac) +
+          html += '<div class="meter"><span class="meter-fill ' + fillClass(l.spent, l.budget, paceFrac) +
                   '" style="width:' + pct(l.spent, l.budget) + '%"></span>' +
-                  (pKey === "month" ? '<i class="pace" style="left:' + (paceFrac * 100) + '%"></i>' : "") + "</div>";
+                  '<i class="pace" style="left:' + (paceFrac * 100) + '%"></i></div>';
         }
         html += "</div>";
       });
@@ -368,15 +360,15 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--stamp);outline-
     wire();
   }
 
-  function fillClass(spent, budget, pKey, paceFrac) {
+  function fillClass(spent, budget, paceFrac) {
     if (spent > budget) return "over";
-    if (pKey === "month" && budget > 0 && spent / budget > paceFrac) return "pacey";
+    if (budget > 0 && spent / budget > paceFrac) return "pacey";
     return "";
   }
 
   function editor(d) {
     var h = '<section class="panel" id="editor"><h2>Monthly budgets</h2>' +
-            '<p>Household amount per category. Berk and Keeley each see their share of it.</p>';
+            '<p>Household amount per category. Berk and Keeley each see their share, and the week view shows a seven-day slice of it.</p>';
     h += '<div class="split-row"><label for="split">Family spend charged to Berk</label>' +
          '<input class="mono" type="number" id="split" min="0" max="100" step="5" value="' + d.defaultSplit + '"></div>';
     d.categories.forEach(function (c, i) {
