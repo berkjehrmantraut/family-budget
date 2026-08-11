@@ -76,7 +76,9 @@ body{
 .row{padding:16px 0;border-bottom:1px dashed var(--rule)}
 .row:last-child{border-bottom:0}
 .row-main{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.row-label{display:flex;flex-direction:column}
 .row-name{font-weight:600;font-size:16px}
+.row-spent{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-soft);margin-top:5px}
 .row-figs{flex:none;text-align:right}
 .row-left{display:block;font-family:"IBM Plex Mono",monospace;font-weight:500;font-size:27px;line-height:1.05;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .row-left.over{color:var(--over)}
@@ -146,7 +148,7 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--stamp);outline-
 (function () {
   "use strict";
 
-  var BUILD = "2026-08-11c";
+  var BUILD = "2026-08-11d";
 
   var app = document.getElementById("app");
   var setup = document.getElementById("setup");
@@ -349,8 +351,10 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--stamp);outline-
         if (l.budget <= 0 && l.spent === 0 && PRIORITY.indexOf(l.category) === -1) return;
         var remaining = l.budget - l.spent;
 
-        html += '<div class="row"><div class="row-main">' +
-                '<span class="row-name">' + esc(l.category) + "</span><span class=\"row-figs\">";
+        html += '<div class="row"><div class="row-main"><span class="row-label">' +
+                '<span class="row-name">' + esc(l.category) + "</span>" +
+                (l.budget > 0 ? '<span class="row-spent">' + money(l.spent) + " spent</span>" : "") +
+                '</span><span class="row-figs">';
         if (l.budget > 0) {
           html += '<span class="row-left ' + (remaining < 0 ? "over" : "") + '">' +
                   (remaining < 0 ? "\u2212" : "") + money(Math.abs(remaining)) + "</span>" +
