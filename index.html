@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F6F5F1">
+<title>B&amp;K Spend</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F6F5F1;
+  --card:#FFFFFF;
+  --ink:#191A18;
+  --ink-soft:#6E716B;
+  --rule:#D8D7D0;
+  --stamp:#1F4E5F;
+  --over:#A8362B;
+  --warn:#9A6B15;
+  --pad:18px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:"Archivo",system-ui,sans-serif;
+  font-size:16px;
+  line-height:1.4;
+  -webkit-font-smoothing:antialiased;
+  padding:0 12px calc(48px + env(safe-area-inset-bottom));
+}
+.wrap{max-width:520px;margin:0 auto}
+
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft)}
+
+/* header */
+.top{display:flex;align-items:baseline;justify-content:space-between;padding:22px 4px 14px}
+.brand{font-weight:700;font-size:15px;letter-spacing:.2em;text-transform:uppercase}
+.stamp-date{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-soft)}
+.refresh{border:0;background:none;color:var(--ink-soft);font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:4px;cursor:pointer}
+.refresh:active{color:var(--ink)}
+
+/* switches */
+.switch{display:flex;gap:6px;margin-bottom:8px}
+.switch button{
+  flex:1;appearance:none;border:1px solid var(--rule);background:transparent;color:var(--ink-soft);
+  font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  padding:9px 4px;border-radius:2px;cursor:pointer;transition:background .15s,color .15s,border-color .15s;
+}
+.switch button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.switch.sub button[aria-pressed="true"]{background:transparent;border-color:var(--stamp);color:var(--stamp);font-weight:600}
+
+/* hero */
+.hero{position:relative;background:var(--card);border:1px solid var(--rule);border-bottom:0;border-radius:3px 3px 0 0;padding:20px var(--pad) 26px;margin:14px 0 22px}
+.hero::after{content:"";position:absolute;left:0;right:0;bottom:-7px;height:14px;
+  background-image:radial-gradient(circle at 7px 7px, var(--paper) 6px, transparent 6.5px);
+  background-size:14px 14px;background-repeat:repeat-x}
+.hero-num{font-family:"IBM Plex Mono",monospace;font-weight:500;font-size:44px;line-height:1;letter-spacing:-.03em;margin:6px 0 4px}
+.hero-num.over{color:var(--over)}
+.hero-sub{font-size:13px;color:var(--ink-soft)}
+.hero-meter{margin-top:16px}
+
+/* meters */
+.meter{position:relative;height:6px;background:var(--rule);border-radius:1px;overflow:hidden}
+.meter-fill{position:absolute;inset:0 auto 0 0;background:var(--stamp);width:0;transition:width .5s ease}
+.meter-fill.over{background:var(--over)}
+.meter-fill.pacey{background:var(--warn)}
+.pace{position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--ink)}
+.pace::after{content:"";position:absolute;top:-3px;left:-2px;border-left:2.5px solid transparent;border-right:2.5px solid transparent;border-top:4px solid var(--ink)}
+
+/* category rows */
+.section-head{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 8px}
+.rows{background:var(--card);border:1px solid var(--rule);border-radius:3px;padding:2px var(--pad)}
+.row{padding:14px 0;border-bottom:1px dashed var(--rule)}
+.row:last-child{border-bottom:0}
+.row-top{display:flex;align-items:baseline}
+.row-name{font-weight:600;font-size:15px;white-space:nowrap}
+.leader{flex:1;border-bottom:1px dotted var(--rule);margin:0 7px;transform:translateY(-4px)}
+.row-amt{font-family:"IBM Plex Mono",monospace;font-size:15px;font-weight:500}
+.row-meta{display:flex;justify-content:space-between;gap:10px;margin:7px 0 8px;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-soft)}
+.row-meta .left{white-space:nowrap}
+.row-meta .over{color:var(--over)}
+.row-meta .unset{color:var(--warn)}
+
+/* recent */
+.tape{background:var(--card);border:1px solid var(--rule);border-radius:3px;padding:4px var(--pad)}
+.txn{display:flex;align-items:baseline;gap:8px;padding:9px 0;border-bottom:1px dotted var(--rule);font-size:13px}
+.txn:last-child{border-bottom:0}
+.txn-date{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-soft);width:38px;flex:none}
+.txn-memo{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.txn-who{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);flex:none}
+.txn-amt{font-family:"IBM Plex Mono",monospace;flex:none}
+.txn-amt.credit{color:var(--stamp)}
+
+/* editor + setup */
+.panel{background:var(--card);border:1px solid var(--rule);border-radius:3px;padding:var(--pad);margin-top:10px}
+.panel h2{font-size:14px;letter-spacing:.14em;text-transform:uppercase;margin:0 0 4px}
+.panel p{font-size:13px;color:var(--ink-soft);margin:0 0 14px}
+.field{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dotted var(--rule)}
+.field label{flex:1;font-size:14px}
+.field input{width:110px;flex:none;font-family:"IBM Plex Mono",monospace;font-size:15px;text-align:right;
+  border:1px solid var(--rule);border-radius:2px;padding:8px 10px;background:var(--paper);color:var(--ink)}
+input[type=url]{width:100%;text-align:left}
+input:focus-visible,button:focus-visible{outline:2px solid var(--stamp);outline-offset:2px}
+.btn{width:100%;margin-top:14px;padding:13px;border:0;border-radius:2px;background:var(--ink);color:var(--paper);
+  font-family:"IBM Plex Mono",monospace;font-size:13px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--rule)}
+.linkish{display:block;width:100%;margin-top:18px;background:none;border:0;color:var(--ink-soft);
+  font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;padding:8px}
+.note{font-family:"IBM Plex Mono",monospace;font-size:12px;margin-top:12px}
+.note.bad{color:var(--over)}
+.note.good{color:var(--stamp)}
+.hidden{display:none}
+.split-row{display:flex;align-items:center;gap:10px;padding-bottom:12px;margin-bottom:6px;border-bottom:1px solid var(--rule)}
+.split-row label{flex:1;font-size:14px}
+.loading{padding:40px 4px;text-align:center}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <div class="brand">B&amp;K Spend</div>
+      <div class="stamp-date" id="updated">loading</div>
+    </div>
+    <button class="refresh" id="refreshBtn" type="button">Refresh</button>
+  </header>
+
+  <main id="app" class="loading eyebrow">Pulling the ledger…</main>
+
+  <!-- first-run setup -->
+  <section id="setup" class="panel hidden">
+    <h2>Connect the sheet</h2>
+    <p>Paste the web app URL from the Apps Script deployment. It ends in <span class="mono">/exec</span>.</p>
+    <input type="url" id="apiInput" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" spellcheck="false">
+    <button class="btn" id="apiSave" type="button">Save URL</button>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* Paste your deployment URL here to hard-code it for both phones. */
+  var API_URL = "";
+
+  var store = {
+    get: function (k, d) { try { var v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
+    set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  };
+
+  var params = new URLSearchParams(location.search);
+  if (params.get("api")) store.set("bk.api", params.get("api"));
+  var api = API_URL || store.get("bk.api", "");
+
+  var state = {
+    data: null,
+    who: store.get("bk.who", "berk"),
+    period: null,
+    editing: false,
+    saving: false,
+    message: null
+  };
+
+  var DEFAULT_PERIOD = { berk: "rolling", keeley: "month", household: "month" };
+  var LABEL = { berk: "Berk", keeley: "Keeley", household: "Both" };
+
+  var app = document.getElementById("app");
+  var setup = document.getElementById("setup");
+
+  /* ---------------------------------------------------------- transport */
+
+  function jsonp(url) {
+    return new Promise(function (resolve, reject) {
+      var cb = "bkcb" + Math.random().toString(36).slice(2);
+      var s = document.createElement("script");
+      var timer = setTimeout(function () { cleanup(); reject(new Error("The sheet took too long to answer.")); }, 20000);
+      function cleanup() { clearTimeout(timer); delete window[cb]; if (s.parentNode) s.parentNode.removeChild(s); }
+      window[cb] = function (d) { cleanup(); resolve(d); };
+      s.onerror = function () { cleanup(); reject(new Error("Could not reach the sheet.")); };
+      s.src = url + (url.indexOf("?") > -1 ? "&" : "?") + "callback=" + cb;
+      document.body.appendChild(s);
+    });
+  }
+
+  function call(query) {
+    var url = api + (query ? "?" + query : "");
+    return fetch(url, { method: "GET" })
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .catch(function () { return jsonp(url); });
+  }
+
+  function load() {
+    if (!api) { app.classList.add("hidden"); setup.classList.remove("hidden"); return; }
+    setup.classList.add("hidden");
+    app.classList.remove("hidden");
+
+    var cached = store.get("bk.cache", "");
+    if (cached && !state.data) {
+      try { state.data = JSON.parse(cached); render(); } catch (e) {}
+    } else if (!state.data) {
+      app.className = "loading eyebrow";
+      app.textContent = "Pulling the ledger…";
+    }
+
+    call("").then(function (d) {
+      if (!d || !d.ok) throw new Error((d && d.error) || "The sheet sent back something unreadable.");
+      state.data = d;
+      store.set("bk.cache", JSON.stringify(d));
+      state.message = null;
+      render();
+    }).catch(function (err) {
+      if (state.data) {
+        state.message = { bad: true, text: "Showing the last saved copy — " + err.message };
+        render();
+      } else {
+        app.className = "";
+        app.innerHTML = '<section class="panel"><h2>No connection</h2><p>' + esc(err.message) +
+          ' Check that the web app is deployed with access set to Anyone.</p>' +
+          '<button class="btn ghost" id="resetApi" type="button">Change the URL</button></section>';
+        document.getElementById("resetApi").onclick = function () { store.set("bk.api", ""); api = ""; load(); };
+      }
+    });
+  }
+
+  /* ------------------------------------------------------------ helpers */
+
+  function money(n, cents) {
+    var v = Math.abs(Number(n) || 0);
+    var s = v.toLocaleString("en-US", {
+      minimumFractionDigits: cents === false ? 0 : 2,
+      maximumFractionDigits: cents === false ? 0 : 2
+    });
+    return (n < 0 ? "\u2212$" : "$") + s;
+  }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function pct(a, b) { return b > 0 ? Math.max(0, Math.min(100, (a / b) * 100)) : 0; }
+
+  function currentPeriod() { return state.period || DEFAULT_PERIOD[state.who]; }
+
+  /* ------------------------------------------------------------- render */
+
+  function render() {
+    var d = state.data;
+    if (!d) return;
+    var pKey = currentPeriod();
+    var period = d.periods[pKey];
+    var lines = period.scopes[state.who];
+
+    document.getElementById("updated").textContent = "as of " + d.updated;
+
+    var budgeted = lines.filter(function (l) { return l.budget > 0; });
+    var totalBudget = budgeted.reduce(function (a, l) { return a + l.budget; }, 0);
+    var totalSpent = lines.reduce(function (a, l) { return a + l.spent; }, 0);
+    var left = totalBudget - totalSpent;
+    var paceFrac = period.elapsedDays / period.lengthDays;
+
+    var html = "";
+
+    /* switches */
+    html += '<div class="switch" role="group" aria-label="Whose budget">';
+    ["berk", "keeley", "household"].forEach(function (k) {
+      html += '<button type="button" data-who="' + k + '" aria-pressed="' + (state.who === k) + '">' + LABEL[k] + '</button>';
+    });
+    html += "</div>";
+
+    html += '<div class="switch sub" role="group" aria-label="Time window">';
+    html += '<button type="button" data-period="rolling" aria-pressed="' + (pKey === "rolling") + '">Last ' + d.rollingDays + ' days</button>';
+    html += '<button type="button" data-period="month" aria-pressed="' + (pKey === "month") + '">' + esc(d.periods.month.label) + '</button>';
+    html += "</div>";
+
+    /* hero */
+    html += '<section class="hero">';
+    if (totalBudget > 0) {
+      html += '<div class="eyebrow">' + (left < 0 ? "Over budget" : "Left to spend") + "</div>";
+      html += '<div class="hero-num ' + (left < 0 ? "over" : "") + '">' + money(Math.abs(left)) + "</div>";
+      html += '<div class="hero-sub">' + money(totalSpent) + " of " + money(totalBudget, false) + " · " +
+              (pKey === "month"
+                ? (period.remainingDays === 0 ? "last day of the month" : period.remainingDays + " days left in " + esc(period.label))
+                : "rolling window, " + money(totalSpent / period.lengthDays) + "/day") +
+              "</div>";
+      html += '<div class="hero-meter"><div class="meter">' +
+              '<span class="meter-fill ' + fillClass(totalSpent, totalBudget, pKey, paceFrac) + '" style="width:' + pct(totalSpent, totalBudget) + '%"></span>' +
+              (pKey === "month" ? '<i class="pace" style="left:' + (paceFrac * 100) + '%"></i>' : "") +
+              "</div></div>";
+    } else {
+      html += '<div class="eyebrow">Spent</div>';
+      html += '<div class="hero-num">' + money(totalSpent) + "</div>";
+      html += '<div class="hero-sub">No budgets set yet. Add them below and this turns into what\u2019s left.</div>';
+    }
+    html += "</section>";
+
+    /* categories */
+    html += '<div class="section-head"><span class="eyebrow">Category</span><span class="eyebrow">' +
+            (pKey === "month" ? "Spent this month" : "Spent in " + d.rollingDays + " days") + "</span></div>";
+    html += '<section class="rows">';
+
+    lines.slice().sort(function (a, b) { return b.spent - a.spent || a.category.localeCompare(b.category); })
+      .forEach(function (l) {
+        if (l.budget <= 0 && l.spent === 0) return;
+        var remaining = l.budget - l.spent;
+        html += '<div class="row"><div class="row-top">' +
+                '<span class="row-name">' + esc(l.category) + '</span><span class="leader"></span>' +
+                '<span class="row-amt">' + money(l.spent) + "</span></div>";
+        html += '<div class="row-meta">';
+        if (l.budget > 0) {
+          html += '<span class="left ' + (remaining < 0 ? "over" : "") + '">' +
+                  (remaining < 0 ? money(-remaining) + " over" : money(remaining) + " left of " + money(l.budget, false)) + "</span>";
+        } else {
+          html += '<span class="left unset">No budget set</span>';
+        }
+        if (state.who === "household") {
+          html += "<span>" + money(l.berkOwn, false) + " B · " + money(l.keeleyOwn, false) + " K · " + money(l.familyShare, false) + " family</span>";
+        } else {
+          html += "<span>" + money(l.own, false) + " yours · " + money(l.familyShare, false) + " family split</span>";
+        }
+        html += "</div>";
+        if (l.budget > 0) {
+          html += '<div class="meter"><span class="meter-fill ' + fillClass(l.spent, l.budget, pKey, paceFrac) +
+                  '" style="width:' + pct(l.spent, l.budget) + '%"></span>' +
+                  (pKey === "month" ? '<i class="pace" style="left:' + (paceFrac * 100) + '%"></i>' : "") + "</div>";
+        }
+        html += "</div>";
+      });
+    html += "</section>";
+
+    /* recent */
+    var mine = d.recent.filter(function (t) {
+      return state.who === "household" || t.who === "Family" ||
+             t.who.toLowerCase() === state.who;
+    }).slice(0, 12);
+
+    html += '<div class="section-head" style="padding-top:26px"><span class="eyebrow">Recent</span><span class="eyebrow">' +
+            (state.who === "household" ? "Everything" : LABEL[state.who] + " + family") + "</span></div>";
+    html += '<section class="tape">';
+    if (!mine.length) {
+      html += '<div class="txn"><span class="txn-memo">Nothing logged yet.</span></div>';
+    } else {
+      mine.forEach(function (t) {
+        html += '<div class="txn"><span class="txn-date">' + esc(t.date) + "</span>" +
+                '<span class="txn-memo">' + esc(t.memo || t.category) + "</span>" +
+                '<span class="txn-who">' + esc(t.who.slice(0, 1)) + "</span>" +
+                '<span class="txn-amt ' + (t.amount < 0 ? "credit" : "") + '">' + money(t.amount) + "</span></div>";
+      });
+    }
+    html += "</section>";
+
+    /* budgets editor */
+    html += '<button class="linkish" id="toggleEdit" type="button">' + (state.editing ? "Close budgets" : "Set budgets") + "</button>";
+    if (state.editing) html += editor(d);
+
+    if (state.message) {
+      html += '<div class="note ' + (state.message.bad ? "bad" : "good") + '">' + esc(state.message.text) + "</div>";
+    }
+
+    app.className = "";
+    app.innerHTML = html;
+    wire();
+  }
+
+  function fillClass(spent, budget, pKey, paceFrac) {
+    if (spent > budget) return "over";
+    if (pKey === "month" && budget > 0 && spent / budget > paceFrac) return "pacey";
+    return "";
+  }
+
+  function editor(d) {
+    var h = '<section class="panel" id="editor"><h2>Monthly budgets</h2>' +
+            '<p>Household amount per category. Berk and Keeley each see their share of it.</p>';
+    h += '<div class="split-row"><label for="split">Family spend charged to Berk</label>' +
+         '<input class="mono" type="number" id="split" min="0" max="100" step="5" value="' + d.defaultSplit + '"></div>';
+    d.categories.forEach(function (c, i) {
+      var line = d.periods.month.scopes.household.filter(function (l) { return l.category === c; })[0];
+      h += '<div class="field"><label for="b' + i + '">' + esc(c) + "</label>" +
+           '<input type="number" inputmode="decimal" step="5" min="0" id="b' + i + '" data-cat="' + esc(c) + '" value="' + (line ? line.budget : 0) + '"></div>';
+    });
+    h += '<div class="field"><label for="pin">PIN</label><input type="password" inputmode="numeric" id="pin" autocomplete="off"></div>';
+    h += '<button class="btn" id="saveBudgets" type="button">' + (state.saving ? "Saving…" : "Save budgets") + "</button></section>";
+    return h;
+  }
+
+  /* --------------------------------------------------------------- wire */
+
+  function wire() {
+    app.querySelectorAll("[data-who]").forEach(function (b) {
+      b.onclick = function () {
+        state.who = b.getAttribute("data-who");
+        state.period = null;
+        store.set("bk.who", state.who);
+        render();
+      };
+    });
+    app.querySelectorAll("[data-period]").forEach(function (b) {
+      b.onclick = function () { state.period = b.getAttribute("data-period"); render(); };
+    });
+    var t = document.getElementById("toggleEdit");
+    if (t) t.onclick = function () { state.editing = !state.editing; state.message = null; render(); };
+
+    var save = document.getElementById("saveBudgets");
+    if (save) save.onclick = function () {
+      var payload = {};
+      document.querySelectorAll("#editor [data-cat]").forEach(function (i) {
+        payload[i.getAttribute("data-cat")] = Number(i.value) || 0;
+      });
+      var pin = (document.getElementById("pin").value || "").trim();
+      if (!pin) { state.message = { bad: true, text: "Enter the PIN to save." }; return render(); }
+      state.saving = true; render();
+
+      call("action=save&pin=" + encodeURIComponent(pin) +
+           "&split=" + encodeURIComponent(document.getElementById("split").value) +
+           "&payload=" + encodeURIComponent(JSON.stringify(payload)))
+        .then(function (d) {
+          state.saving = false;
+          if (!d || !d.ok) { state.message = { bad: true, text: (d && d.error) || "Save failed." }; return render(); }
+          state.data = d;
+          store.set("bk.cache", JSON.stringify(d));
+          state.editing = false;
+          state.message = { text: "Budgets saved." };
+          render();
+        })
+        .catch(function (err) {
+          state.saving = false;
+          state.message = { bad: true, text: err.message };
+          render();
+        });
+    };
+  }
+
+  document.getElementById("refreshBtn").onclick = function () { state.message = null; load(); };
+  document.getElementById("apiSave").onclick = function () {
+    var v = document.getElementById("apiInput").value.trim();
+    if (!/^https:\/\/script\.google\.com\/.*\/exec$/.test(v)) {
+      document.getElementById("apiInput").style.borderColor = "var(--over)";
+      return;
+    }
+    store.set("bk.api", v); api = v; load();
+  };
+
+  load();
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden && state.data) load();
+  });
+})();
+</script>
+</body>
+</html>
