@@ -73,16 +73,16 @@ body{
 /* category rows */
 .section-head{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 8px}
 .rows{background:var(--card);border:1px solid var(--rule);border-radius:3px;padding:2px var(--pad)}
-.row{padding:14px 0;border-bottom:1px dashed var(--rule)}
+.row{padding:16px 0;border-bottom:1px dashed var(--rule)}
 .row:last-child{border-bottom:0}
-.row-top{display:flex;align-items:baseline}
-.row-name{font-weight:600;font-size:15px;white-space:nowrap}
-.leader{flex:1;border-bottom:1px dotted var(--rule);margin:0 7px;transform:translateY(-4px)}
-.row-amt{font-family:"IBM Plex Mono",monospace;font-size:15px;font-weight:500}
-.row-meta{display:flex;justify-content:space-between;gap:10px;margin:7px 0 8px;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-soft)}
-.row-meta .left{white-space:nowrap}
-.row-meta .over{color:var(--over)}
-.row-meta .unset{color:var(--warn)}
+.row-main{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.row-name{font-weight:600;font-size:16px}
+.row-figs{flex:none;text-align:right}
+.row-left{display:block;font-family:"IBM Plex Mono",monospace;font-weight:500;font-size:27px;line-height:1.05;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.row-left.over{color:var(--over)}
+.row-left.unset{color:var(--ink-soft);font-size:22px}
+.row-of{display:block;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-soft);margin-top:4px}
+.row .meter{margin-top:13px}
 
 /* recent */
 .tape{background:var(--card);border:1px solid var(--rule);border-radius:3px;padding:4px var(--pad)}
@@ -146,6 +146,23 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--stamp);outline-
 (function () {
   "use strict";
 
+  var BUILD = "2026-08-11c";
+
+  var app = document.getElementById("app");
+  var setup = document.getElementById("setup");
+
+  /* If anything throws, say so on screen instead of sitting on the loader. */
+  window.onerror = function (msg, src, line) {
+    if (!app) return false;
+    app.className = "";
+    app.innerHTML = '<section class="panel"><h2>This phone stopped the script</h2>' +
+      "<p>The page loaded but the code hit an error. Screenshot this.</p>" +
+      '<div class="note bad">' + String(msg) + "<br>line " + line + " \u00b7 build " + BUILD + "</div></section>";
+    return false;
+  };
+
+  function each(list, fn) { Array.prototype.slice.call(list).forEach(fn); }
+
   /* Paste your deployment URL here to hard-code it for both phones. */
   var API_URL = "https://script.google.com/macros/s/AKfycbxjAi3auqVEJEpegoz8fHtijxTyL4sCyh36EngQ0yH4Fod-RhmTNAO0tyifhh0K8pubmg/exec";
 
@@ -154,8 +171,8 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--stamp);outline-
     set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   };
 
-  var params = new URLSearchParams(location.search);
-  if (params.get("api")) store.set("bk.api", params.get("api"));
+  var qsApi = (location.search.match(/[?&]api=([^&]+)/) || [])[1];
+  if (qsApi) store.set("bk.api", decodeURIComponent(qsApi));
   var api = API_URL || store.get("bk.api", "");
 
   var state = {
@@ -171,16 +188,13 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--stamp);outline-
   var LABEL = { berk: "Berk", keeley: "Keeley", household: "Both" };
   var PRIORITY = ["Dining Out", "General Spend", "Groceries", "Cars"];
 
-  var app = document.getElementById("app");
-  var setup = document.getElementById("setup");
-
   /* ---------------------------------------------------------- transport */
 
   function jsonp(url) {
     return new Promise(function (resolve, reject) {
       var cb = "bkcb" + Math.random().toString(36).slice(2);
       var s = document.createElement("script");
-      var timer = setTimeout(function () { cleanup(); reject(new Error("The sheet took too long to answer.")); }, 20000);
+      var timer = setTimeout(function () { cleanup(); reject(new Error("No answer from Google after 15 seconds.")); }, 15000);
       function cleanup() { clearTimeout(timer); delete window[cb]; if (s.parentNode) s.parentNode.removeChild(s); }
       window[cb] = function (d) { cleanup(); resolve(d); };
       s.onerror = function () { cleanup(); reject(new Error("Could not reach the sheet.")); };
@@ -189,11 +203,37 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--stamp);outline-
     });
   }
 
+  var lastDetail = "";
+
+  function parseReply(text) {
+    try { return JSON.parse(text); }
+    catch (e) {
+      if (/<html|<!DOCTYPE|accounts\.google|signin/i.test(text)) {
+        throw new Error("Google sent a sign-in page instead of data. In Apps Script, redeploy with Who has access set to Anyone.");
+      }
+      throw new Error("The reply was not readable data.");
+    }
+  }
+
   function call(query) {
     var url = api + (query ? "?" + query : "");
-    return fetch(url, { method: "GET" })
-      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
-      .catch(function () { return jsonp(url); });
+    var live = fetch(url, { method: "GET", redirect: "follow", credentials: "omit" })
+      .then(function (r) {
+        return r.text().then(function (t) {
+          if (!r.ok) throw new Error("The sheet replied HTTP " + r.status + ".");
+          return parseReply(t);
+        });
+      });
+
+    var timeout = new Promise(function (_, reject) {
+      setTimeout(function () { reject(new Error("The request timed out after 12 seconds.")); }, 12000);
+    });
+
+    return Promise.race([live, timeout])
+      .catch(function (e) {
+        lastDetail = e.message;
+        return jsonp(url);   // some Android browsers block the cross-origin fetch
+      });
   }
 
   function load() {
@@ -206,7 +246,12 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--stamp);outline-
       try { state.data = JSON.parse(cached); render(); } catch (e) {}
     } else if (!state.data) {
       app.className = "loading eyebrow";
-      app.textContent = "Pulling the ledger…";
+      app.textContent = "Pulling the ledger\u2026 (build " + BUILD + ")";
+      setTimeout(function () {
+        if (!state.data && app.className.indexOf("loading") > -1) {
+          app.textContent = "Still waiting on Google\u2026";
+        }
+      }, 6000);
     }
 
     call("").then(function (d) {
@@ -221,8 +266,10 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--stamp);outline-
         render();
       } else {
         app.className = "";
-        app.innerHTML = '<section class="panel"><h2>No connection</h2><p>' + esc(err.message) +
-          ' Check that the web app is deployed with access set to Anyone.</p>' +
+        app.innerHTML = '<section class="panel"><h2>Can\u2019t reach the sheet</h2><p>' +
+          esc(lastDetail || err.message) + "</p>" +
+          '<div class="note mono">URL: ' + esc(api.slice(0, 60)) + (api.length > 60 ? "\u2026" : "") + "<br>" +
+          "Fallback: " + esc(err.message) + "</div>" +
           '<button class="btn ghost" id="resetApi" type="button">Change the URL</button></section>';
         document.getElementById("resetApi").onclick = function () { store.set("bk.api", ""); api = ""; load(); };
       }
@@ -286,7 +333,7 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--stamp);outline-
 
     /* categories */
     html += '<div class="section-head"><span class="eyebrow">Category</span><span class="eyebrow">' +
-            (pKey === "month" ? "Spent in " + esc(period.label) : "Spent this week") + "</span></div>";
+            (pKey === "month" ? "Left in " + esc(period.label) : "Left this week") + "</span></div>";
     html += '<section class="rows">';
 
     lines.slice().sort(function (a, b) {
@@ -301,22 +348,18 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--stamp);outline-
       .forEach(function (l) {
         if (l.budget <= 0 && l.spent === 0 && PRIORITY.indexOf(l.category) === -1) return;
         var remaining = l.budget - l.spent;
-        html += '<div class="row"><div class="row-top">' +
-                '<span class="row-name">' + esc(l.category) + '</span><span class="leader"></span>' +
-                '<span class="row-amt">' + money(l.spent) + "</span></div>";
-        html += '<div class="row-meta">';
+
+        html += '<div class="row"><div class="row-main">' +
+                '<span class="row-name">' + esc(l.category) + "</span><span class=\"row-figs\">";
         if (l.budget > 0) {
-          html += '<span class="left ' + (remaining < 0 ? "over" : "") + '">' +
-                  (remaining < 0 ? money(-remaining) + " over" : money(remaining) + " left of " + money(l.budget, false)) + "</span>";
+          html += '<span class="row-left ' + (remaining < 0 ? "over" : "") + '">' +
+                  (remaining < 0 ? "\u2212" : "") + money(Math.abs(remaining)) + "</span>" +
+                  '<span class="row-of">of ' + money(l.budget, false) + "</span>";
         } else {
-          html += '<span class="left unset">No budget set</span>';
+          html += '<span class="row-left unset">' + money(l.spent) + "</span>" +
+                  '<span class="row-of">no budget set</span>';
         }
-        if (state.who === "household") {
-          html += "<span>" + money(l.berkOwn, false) + " B · " + money(l.keeleyOwn, false) + " K · " + money(l.familyShare, false) + " family</span>";
-        } else {
-          html += "<span>" + money(l.own, false) + " yours · " + money(l.familyShare, false) + " family split</span>";
-        }
-        html += "</div>";
+        html += "</span></div>";
         if (l.budget > 0) {
           html += '<div class="meter"><span class="meter-fill ' + fillClass(l.spent, l.budget, paceFrac) +
                   '" style="width:' + pct(l.spent, l.budget) + '%"></span>' +
@@ -384,7 +427,7 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--stamp);outline-
   /* --------------------------------------------------------------- wire */
 
   function wire() {
-    app.querySelectorAll("[data-who]").forEach(function (b) {
+    each(app.querySelectorAll("[data-who]"), function (b) {
       b.onclick = function () {
         state.who = b.getAttribute("data-who");
         state.period = null;
@@ -392,7 +435,7 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--stamp);outline-
         render();
       };
     });
-    app.querySelectorAll("[data-period]").forEach(function (b) {
+    each(app.querySelectorAll("[data-period]"), function (b) {
       b.onclick = function () { state.period = b.getAttribute("data-period"); render(); };
     });
     var t = document.getElementById("toggleEdit");
@@ -401,7 +444,7 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--stamp);outline-
     var save = document.getElementById("saveBudgets");
     if (save) save.onclick = function () {
       var payload = {};
-      document.querySelectorAll("#editor [data-cat]").forEach(function (i) {
+      each(document.querySelectorAll("#editor [data-cat]"), function (i) {
         payload[i.getAttribute("data-cat")] = Number(i.value) || 0;
       });
       var pin = (document.getElementById("pin").value || "").trim();
